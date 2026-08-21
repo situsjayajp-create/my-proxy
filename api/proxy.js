@@ -1,3 +1,5 @@
+const fetch = require('node-fetch');
+
 exports.handler = async function (event, context) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -11,33 +13,27 @@ exports.handler = async function (event, context) {
 
   const targetUrl = event.queryStringParameters ? event.queryStringParameters.url : null;
   if (!targetUrl) {
-    return { statusCode: 400, headers, body: 'URL parameter required.' };
+    return { statusCode: 400, headers, body: 'URL Required' };
   }
 
   try {
     const fetchOptions = {
       method: event.httpMethod,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
-        'Referer': 'https://www.visionplus.id/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://rtmklik.rtm.gov.my/',
+        'Origin': 'https://rtmklik.rtm.gov.my/'
       }
     };
 
-    if (event.httpMethod === 'POST' && event.body) {
-      fetchOptions.body = event.isBase64Encoded 
-        ? Buffer.from(event.body, 'base64') 
-        : event.body;
-    }
-
     const response = await fetch(targetUrl, fetchOptions);
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = await response.buffer();
 
     return {
       statusCode: response.status,
       headers: {
         ...headers,
-        'Content-Type': response.headers.get('content-type') || 'text/plain'
+        'Content-Type': response.headers.get('content-type') || 'application/x-mpegURL'
       },
       body: buffer.toString('base64'),
       isBase64Encoded: true
