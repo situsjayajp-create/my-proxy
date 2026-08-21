@@ -1,36 +1,48 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+exports.handler = async function (event, context) {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': '*'
+  };
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  const targetUrl = req.query.url;
+  const targetUrl = event.queryStringParameters ? event.queryStringParameters.url : null;
   if (!targetUrl) {
-    return res.status(400).send('URL parameter required.');
+    return { statusCode: 400, headers, body: 'URL parameter required.' };
   }
 
   try {
     const fetchOptions = {
-      method: req.method,
+      method: event.httpMethod,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
         'Referer': 'https://www.visionplus.id/'
       }
     };
 
-    if (req.method === 'POST') {
-      fetchOptions.body = req.body;
+    if (event.httpMethod === 'POST' && event.body) {
+      fetchOptions.body = event.isBase64Encoded 
+        ? Buffer.from(event.body, 'base64') 
+        : event.body;
     }
 
     const response = await fetch(targetUrl, fetchOptions);
-    const data = await response.arrayBuffer();
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'text/plain');
-    return res.status(response.status).send(Buffer.from(data));
+    return {
+      statusCode: response.status,
+      headers: {
+        ...headers,
+        'Content-Type': response.headers.get('content-type') || 'text/plain'
+      },
+      body: buffer.toString('base64'),
+      isBase64Encoded: true
+    };
   } catch (error) {
-    return res.status(500).send(error.message);
+    return { statusCode: 500, headers, body: error.message };
   }
-}
+};
